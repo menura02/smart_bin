@@ -1,15 +1,3 @@
-"""
-PROJE: Akıllı Çöp Konteyneri Doluluk Tahmin Sistemi
-YAZAR: [Örnek Öğrenci]
-TARİH: 2026-01-20
-
-AÇIKLAMA:
-Bu modül, Smart_Bin.csv verisetini kullanarak konteynerlerin boşaltılma durumunu (Class)
-tahmin eder. Veri sızıntısını (data leakage) önlemek için Scikit-Learn Pipeline mimarisi
-kullanılmıştır.
-"""
-
-# --- 1. Kütüphane İçe Aktarımı (Düzenli ve Gereksizlerden Arındırılmış) ---
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,11 +12,11 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (accuracy_score, classification_report, confusion_matrix, 
                              roc_auc_score, roc_curve)
 
-# Uyarıları yönet (Gereksiz kalabalığı önle)
+# Uyarıları yönet 
 import warnings
 warnings.filterwarnings('ignore')
 
-# Sabitler (Global Configuration)
+# Sabitler 
 FILE_PATH = 'Smart_Bin.csv'
 TARGET_COL = 'Class'
 RANDOM_STATE = 42
@@ -41,8 +29,6 @@ def load_and_engineer_features(filepath):
         df = pd.read_csv(filepath)
         print(f"[BİLGİ] Veri seti yüklendi. Boyut: {df.shape}")
         
-        # İş Zekası Dokunuşu: Doluluk Hızı Özelliği
-        # 4. Koddaki yaratıcı fikri entegre ediyoruz.
         if 'FL_B' in df.columns and 'FL_A' in df.columns:
             df['Doluluk_Artisi'] = df['FL_B'] - df['FL_A']
             print("[BİLGİ] 'Doluluk_Artisi' özelliği türetildi.")
@@ -61,17 +47,15 @@ def build_pipeline(numeric_features, categorical_features):
     - Test setini "görmeden" işlem yapmak için.
     """
     
-    # Sayısal Değişkenler İçin İşlemler:
-    # 1. Eksik verileri medyan ile doldur (Outlier'lara karşı dirençli)
-    # 2. Standartlaştır (Scale)
+    # Eksik verileri medyan ile doldur 
+    # Standartlaştır 
     numeric_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median')),
         ('scaler', StandardScaler())
     ])
 
-    # Kategorik Değişkenler İçin İşlemler:
-    # 1. Eksik verileri 'missing' etiketi ile doldur
-    # 2. One-Hot Encoding yap (Bilinmeyen kategorileri yoksay)
+    # Eksik verileri 'missing' etiketi ile doldur
+    # One-Hot Encoding yap (Bilinmeyen kategorileri yoksay)
     categorical_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
         ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
@@ -101,7 +85,7 @@ def evaluate_model(pipeline, X_test, y_test, y_test_encoded):
     y_pred = pipeline.predict(X_test)
     y_proba = pipeline.predict_proba(X_test)[:, 1] # ROC için pozitif sınıf olasılığı
 
-    # 1. Metrikler
+    # Metrikler
     print("\n" + "="*40)
     print("MODEL PERFORMANS RAPORU")
     print("="*40)
@@ -110,7 +94,7 @@ def evaluate_model(pipeline, X_test, y_test, y_test_encoded):
     print("\nClassification Report:")
     print(classification_report(y_test, y_pred))
 
-    # 2. Görselleştirme (Confusion Matrix & ROC)
+    # Görselleştirme (Confusion Matrix & ROC)
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
     # Confusion Matrix
@@ -132,11 +116,11 @@ def evaluate_model(pipeline, X_test, y_test, y_test_encoded):
     plt.show()
 
 def main():
-    # 1. Veri Yükleme
+    # Veri Yükleme
     df = load_and_engineer_features(FILE_PATH)
     if df is None: return
 
-    # 2. Hedef ve Özellik Ayrımı
+    # Hedef ve Özellik Ayrımı
     X = df.drop(TARGET_COL, axis=1)
     y = df[TARGET_COL]
 
@@ -147,35 +131,32 @@ def main():
     print(f"[BİLGİ] Sayısal Özellikler: {list(numeric_features)}")
     print(f"[BİLGİ] Kategorik Özellikler: {list(categorical_features)}")
 
-    # 3. Eğitim / Test Ayrımı (Stratify Önemli!)
+    # Eğitim / Test Ayrımı 
     X_train, X_test, y_train, y_test = train_test_split(X, y, 
                                                         test_size=0.2, 
                                                         stratify=y, 
                                                         random_state=RANDOM_STATE)
 
-    # Hedef Değişkeni Encode Et (ROC AUC için gereklidir)
-    # Pipeline dışında yapıyoruz çünkü Pipeline X'i işler, y'yi değil.
+    # Hedef Değişkeni Encode Et 
     y_train_encoded = y_train.apply(lambda x: 1 if x == 'Emptying' else 0) # Örnek mapping
     y_test_encoded = y_test.apply(lambda x: 1 if x == 'Emptying' else 0)
 
-    # 4. Pipeline Kurulumu ve Eğitim
+    # Pipeline Kurulumu ve Eğitim
     print("[BİLGİ] Model eğitimi başlıyor...")
     pipeline = build_pipeline(numeric_features, categorical_features)
     pipeline.fit(X_train, y_train)
 
-    # 5. Cross-Validation (Modelin kararlılığını test et)
+    # Cross-Validation (Modelin kararlılığını test et)
     cv_scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring='accuracy')
     print(f"[BİLGİ] 5-Katlı Çapraz Doğrulama Ortalaması: {cv_scores.mean():.4f} (+/- {cv_scores.std()*2:.4f})")
 
-    # 6. Değerlendirme
+    # Değerlendirme
     evaluate_model(pipeline, X_test, y_test, y_test_encoded)
 
-    # 7. Feature Importance (Pipeline içinden modele erişim)
-    # Bu kısım biraz ileri seviyedir ama 100 puan için gereklidir.
+    # Feature Importance
     model = pipeline.named_steps['classifier']
     preprocessor = pipeline.named_steps['preprocessor']
     
-    # OneHotEncoder sonrası oluşan sütun isimlerini al
     cat_feature_names = preprocessor.named_transformers_['cat']['onehot'].get_feature_names_out(categorical_features)
     all_feature_names = np.concatenate([numeric_features, cat_feature_names])
     
@@ -188,4 +169,5 @@ def main():
     print(importances)
 
 if __name__ == "__main__":
+
     main()
