@@ -11,12 +11,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (accuracy_score, classification_report, confusion_matrix, 
                              roc_auc_score, roc_curve)
-
-# Uyarıları yönet 
 import warnings
 warnings.filterwarnings('ignore')
 
-# Sabitler 
+#sabitler 
 FILE_PATH = 'Smart_Bin.csv'
 TARGET_COL = 'Class'
 RANDOM_STATE = 42
@@ -47,33 +45,33 @@ def build_pipeline(numeric_features, categorical_features):
     - Test setini "görmeden" işlem yapmak için.
     """
     
-    # Eksik verileri medyan ile doldur 
-    # Standartlaştır 
+    #eksik verileri medyan ile doldur 
+    #standartlaştır 
     numeric_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median')),
         ('scaler', StandardScaler())
     ])
 
-    # Eksik verileri 'missing' etiketi ile doldur
-    # One-Hot Encoding yap (Bilinmeyen kategorileri yoksay)
+    #eksik verileri 'missing' etiketi ile doldur
+    #one-hot encoding
     categorical_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
         ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
     ])
 
-    # İşlemleri Birleştir
+    #islemleri birleştir
     preprocessor = ColumnTransformer(
         transformers=[
             ('num', numeric_transformer, numeric_features),
             ('cat', categorical_transformer, categorical_features)
         ])
     
-    # Ana Model Pipeline'ı
+    #ana model pipeline'ı
     model_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor),
         ('classifier', RandomForestClassifier(n_estimators=100, 
                                               random_state=RANDOM_STATE, 
-                                              class_weight='balanced')) # Dengesiz veriye önlem
+                                              class_weight='balanced')) #dengesiz veriye önlem
     ])
     
     return model_pipeline
@@ -83,9 +81,9 @@ def evaluate_model(pipeline, X_test, y_test, y_test_encoded):
     Model performansını kapsamlı metriklerle değerlendirir ve görselleştirir.
     """
     y_pred = pipeline.predict(X_test)
-    y_proba = pipeline.predict_proba(X_test)[:, 1] # ROC için pozitif sınıf olasılığı
+    y_proba = pipeline.predict_proba(X_test)[:, 1] #roc için pozitif sınıf olasılıgı
 
-    # Metrikler
+    #metrikler
     print("\n" + "="*40)
     print("MODEL PERFORMANS RAPORU")
     print("="*40)
@@ -94,16 +92,16 @@ def evaluate_model(pipeline, X_test, y_test, y_test_encoded):
     print("\nClassification Report:")
     print(classification_report(y_test, y_pred))
 
-    # Görselleştirme (Confusion Matrix & ROC)
+    #gorsellestirme 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-    # Confusion Matrix
+    #confusion matrix
     sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt='d', cmap='Blues', ax=axes[0])
     axes[0].set_title('Confusion Matrix')
     axes[0].set_xlabel('Tahmin')
     axes[0].set_ylabel('Gerçek')
 
-    # ROC Curve
+    #roc curve
     fpr, tpr, _ = roc_curve(y_test_encoded, y_proba)
     axes[1].plot(fpr, tpr, label=f"AUC = {roc_auc_score(y_test_encoded, y_proba):.2f}", color='darkorange', lw=2)
     axes[1].plot([0, 1], [0, 1], 'k--', lw=2)
@@ -116,44 +114,44 @@ def evaluate_model(pipeline, X_test, y_test, y_test_encoded):
     plt.show()
 
 def main():
-    # Veri Yükleme
+    #veri yukleme
     df = load_and_engineer_features(FILE_PATH)
     if df is None: return
 
-    # Hedef ve Özellik Ayrımı
+    #hedef ve ozellik ayrımı
     X = df.drop(TARGET_COL, axis=1)
     y = df[TARGET_COL]
 
-    # Özellik Türlerini Belirle
+    #ozellik turlerini belirle
     numeric_features = X.select_dtypes(include=['int64', 'float64']).columns
     categorical_features = X.select_dtypes(include=['object']).columns
 
     print(f"[BİLGİ] Sayısal Özellikler: {list(numeric_features)}")
     print(f"[BİLGİ] Kategorik Özellikler: {list(categorical_features)}")
 
-    # Eğitim / Test Ayrımı 
+    #egitim / test ayrımı 
     X_train, X_test, y_train, y_test = train_test_split(X, y, 
                                                         test_size=0.2, 
                                                         stratify=y, 
                                                         random_state=RANDOM_STATE)
 
-    # Hedef Değişkeni Encode Et 
-    y_train_encoded = y_train.apply(lambda x: 1 if x == 'Emptying' else 0) # Örnek mapping
+    #hedef degiskeni encode et 
+    y_train_encoded = y_train.apply(lambda x: 1 if x == 'Emptying' else 0) #ornek mapping
     y_test_encoded = y_test.apply(lambda x: 1 if x == 'Emptying' else 0)
 
-    # Pipeline Kurulumu ve Eğitim
+    #pipeline kurulumu ve egitim
     print("[BİLGİ] Model eğitimi başlıyor...")
     pipeline = build_pipeline(numeric_features, categorical_features)
     pipeline.fit(X_train, y_train)
 
-    # Cross-Validation (Modelin kararlılığını test et)
+    #cross-validation
     cv_scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring='accuracy')
     print(f"[BİLGİ] 5-Katlı Çapraz Doğrulama Ortalaması: {cv_scores.mean():.4f} (+/- {cv_scores.std()*2:.4f})")
 
-    # Değerlendirme
+    #degerlendirme
     evaluate_model(pipeline, X_test, y_test, y_test_encoded)
 
-    # Feature Importance
+    #feature importance
     model = pipeline.named_steps['classifier']
     preprocessor = pipeline.named_steps['preprocessor']
     
@@ -171,3 +169,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
