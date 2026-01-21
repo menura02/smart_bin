@@ -1,20 +1,15 @@
-# Smart Bin: Akıllı Atık Yönetimi ve Doluluk Tahmini
+# Akıllı Atık Yönetimi ve Doluluk Tahmini
 
-Bu proje IoT tabanlı çöp konteynerlerinden alınan sensör verilerini analiz eder. Konteynerlerin boşaltılma gerekliliğini tahmin eder. Uçtan uca bir makine öğrenmesi hattı sunar.
-
-Veri sızıntısını önleyen pipeline mimarisi kullanır. Otomatik model karşılaştırma süreçlerini içerir.
-
+Bu proje çöp konteynerlerı üzerindeki sensörlerden alınan verileri göz önüne alarak konteynerların ne zaman boşaltılması gerektiğini tahmin eden bir model eğitmeyi amaçlar. Veri sızıntısını önleyen pipeline mimarisi kullanır.
 ## Proje Amacı
 
-Bu sistem şu hedeflere ulaşır:
+Sistemin hedefleri:
 
-* **Operasyonel Optimizasyon:** Kritik doluluk seviyesine ulaşan konteynerleri tespit eder.
-* **Gürbüz Modelleme:** Eksik sensör verilerine karşı bir yapı kurar.
-* **Otomatik Model Seçimi:** Farklı algoritmaları yarıştırır. En iyi modeli otomatik seçer.
+* **Operasyonel Optimizasyon:** Kritik doluluk seviyesine ulaşan konteynerleri tespit etmek.
+* **Veri Güvenilirliği:** Sensörlerden gelebilecek absürt verilerin modeli bozmaması.
+* **Otomatik Model Seçimi:** Farklı algoritmaları karşılaştırır. En verimlisini tercih eder.
 
 ## Veri Seti
-
-Veri seti konteynerlerin fiziksel özelliklerini ve anlık sensör ölçümlerini içerir.
 
 * **Class:** Hedef değişken. Durum tahmini yapar 
 * **FL_B:** Alt sensörden okunan güncel doluluk yüzdesi
@@ -26,27 +21,27 @@ Veri seti konteynerlerin fiziksel özelliklerini ve anlık sensör ölçümlerin
 ## Teknik Mimari
 
 ### 1. Veri Sızıntısını Önleme
-Geleneksel yöntemler veriyi önce doldurur sonra böler. Bu yanlıştır. Veri işleme adımları Pipeline içine gömülüdür. Test verisi eğitim sürecinden izole kalır.
+Veri sızıntısını önlemek amacıyla pipeline kullanıldı. Kategoriler sadece train setinden öğreniliyor. Test seti bilgisi eğitimde kullanılmıyor.
 
-### 2. Özellik Mühendisliği
-Sadece ham sensör verileri kullanılmaz. İş bilgisi sürece dahil edilir. `Doluluk_Artisi` özelliği türetilmiştir. Model konteynerin dolma hızını matematiksel olarak algılar.
+### 2. Özellik Türetimi
+Sadece sensör verileri kullanılmadı. `Doluluk_Artisi` özelliği türetildi. Böylece model, sadece konteynırın ne kadar dolu olduğunu değil aynı zamanda ne kadar hızlı doldugunu da biliyor.
 
-### 3. Gelişmiş Ön İşleme
-* **Sayısal Veriler:** Medyan stratejisi kullanılır. Sensör hatalarından kaynaklanan uç değerlerin etkisi kırılır.
-* **Kategorik Veriler:** OneHotEncoder kullanılır. Yeni konteyner türleri kodun çalışmasını durdurmaz.
+### 3. Ön İşleme
+* **Sayısal Veriler:** Eksik değerler medyan verisi ile dolduruldu, böylece sensör hatalarından kaynaklanan absürt değerlerin etkisi azaldı.
+* **Kategorik Veriler:** OneHotEncoder kullanılır. Bu sayede yeni konteyner türleri kodun çalışmasını durdurmaz.
 
 ## Model Performansı
 
-Proje 4 farklı algoritmayı test eder. 5-Katlı Çapraz Doğrulama yöntemi kullanılır.
+Proje 4 farklı algoritmayı test eder. 
 
 | Model | Doğruluk (Accuracy) | Yorum |
 | :--- | :--- | :--- |
 | **Random Forest** | **%96.01** | Karmaşık ilişkileri en iyi yakalar. |
-| Gradient Boosting | %91.70 | Başarılıdır ancak eğitim maliyeti yüksektir. |
-| KNN (k=5) | %89.41 | Gürültülü verilerde performansı düşüktür. |
+| Gradient Boosting | %91.70 | Eğitim maliyeti yüksek. |
+| KNN (k=5) | %89.41 | Kirli verilerde performansı düşüktür. |
 | Logistic Regression | %87.15 | Doğrusal olmayan ilişkilerde yetersiz kalır. |
 
-Random Forest en yüksek doğruluğu verir. Varyansa karşı dirençlidir. Nihai model olarak seçilmiştir.
+Random Forest en yüksek doğruluğu verdi. Nihai model olarak seçildi.
 
 ## Analiz Sonuçları
 
@@ -54,7 +49,7 @@ Random Forest en yüksek doğruluğu verir. Varyansa karşı dirençlidir. Nihai
 Her konteyner tipi aynı hızda dolmaz. Diamond tipi konteynerler Mixed atık türünde %70 üzeri doluluk oranına sahiptir.
 
 **Hata Analizi:**
-Model yanlış negatifleri minimize eder. Dolu kutuya boş denmesini engeller.
+Model dolu kutuya boş denmesini engeller, böylece kritik hataların önüne geçer.
 
 **Özellik Önem Düzeyleri:**
 Model karar verirken şunlara odaklanır:
